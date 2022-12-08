@@ -1,72 +1,56 @@
+import { Button, Rating, Typography } from "@mui/material";
 import Link from "next/link";
-import ImgSlider from "../../components/Carousel";
-import { getClass, getClassImages } from "../../src/services/classes.api";
-import {
-  Classes,
-  ClassImages,
-} from "../../src/utils/database/database.entities";
-import {
-  ClassButton,
-  ClassDetailWrapper,
-  InfoWrapper,
-} from "../../styles/card.styles";
+import { useState } from "react";
+import { getClass, getClassesList } from "../../src/services/classes.api";
+import { Classes } from "../../src/utils/database/database.entities";
+import {supabaseClient} from "../../src/utils/database/supabase.key";
 
-interface Gym {
-  gym: Classes;
-  gymImages: ClassImages;
-  // allReservations: ReservationTransactions[];
-}
-
-function ClassDetails({ gym, gymImages }: Gym) {
+function ClassDetails({ gym }) {
+  let [rating, setRating] = useState(0);
   return (
     <>
-      <ImgSlider images={gymImages} />
-      <ClassDetailWrapper>
-        <span className="title">{gym.name}</span>
-        <span className="description">{gym.description}</span>
-      </ClassDetailWrapper>
-      <InfoWrapper>
-        <span className="title">수업 유형</span>
-        <span className="content">{gym.exercise_type}</span>
-        <span className="title">소요시간</span>
-        <span className="content">{gym.duration}</span>
-        <span className="title">수업 준비물</span>
-        <span className="content">{gym.requirements}</span>
-        <span className="title">소요 크레딧</span>
-        <span className="content">{gym.credits_required}</span>
-      </InfoWrapper>
-      <ClassButton variant="contained" style={{ marginBottom: 70 }}>
-        <Link
-          href={`/classes/reserve/${encodeURIComponent(gym.id)}`}
-          className="Link"
-        >
+      <div>{gym.name}</div>
+      <Button variant="contained">
+        <Link href={`/classes/reserve/${encodeURIComponent(gym.id)}`}>
           예약하기
         </Link>
-      </ClassButton>
+      </Button>
+
+      <Typography component="legend">리뷰 남겨주세요!</Typography>
+      <Rating
+        name="simple-controlled"
+        value={rating}
+        precision={0.5}
+        onChange={(event, newValue) => {
+          setRating(newValue);
+        }}
+      />
     </>
   );
 }
 
-// export async function getStaticPaths() {
-//   const gyms = await getClassesList();
-//   const paths = gyms.map((gym: Classes) => ({
-//     params: { id: `${gym.id}` },
-//   }));
 
-//   return {
-//     paths,
-//     fallback: false,
-//   };
-// }
 
-export async function getServerSideProps({ params }) {
-  const classId = Number(params.id);
-  const gym = await getClass(classId);
-  const gymImages = await getClassImages(classId);
-  // const allReservations = await getReservations();
+export async function getStaticPaths() {
+  const gyms = await getClassesList();
+  const paths = gyms.map((gym: Classes) => ({
+    params: { id: `${gym.id}` },
+  }));
+
   return {
-    props: { gym, gymImages },
+    paths,
+    fallback: false,
   };
 }
+
+export async function getStaticProps({ params }) {
+    const { data, error } = await supabaseClient.rpc('average_rating')
+    console.log('data: ', data)
+    const gym = await getClass(Number(params.id));
+  return {
+    props: { gym },
+  };
+}
+
 
 export default ClassDetails;
